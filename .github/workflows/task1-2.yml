@@ -1,0 +1,51 @@
+name: Task 1.2 # Run Bandit on a new pull request on the main branch and reject if any High issues are found
+on:
+  pull_request:
+    branches:
+      - main
+permissions:
+      contents: write # Required to check out the code
+      pull-requests: write  # Required to post PR comments and update the PR status  
+
+jobs:
+  run-bandit:
+    runs-on: ubuntu-latest
+          
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      - name: Run Bandit
+        run: bandit -r . --severity-level high -f json -o bandit-high-report.json 
+        continue-on-error: true
+        # The continue-on-error flag is set to true to allow the workflow to continue even if Bandit finds issues.
+
+
+      - name: Publish Bandit Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bandit Report
+          path: bandit-high-report.json
+        
+      - name: Check Bandit Report for High Severity Issues and Action on PR
+        id: check_bandit
+        run: |
+            if grep -q '"issue_severity": "HIGH"' bandit-high-report.json; then 
+              echo "::error:: High severity issues found in Bandit scan. Rejecting the pull request." 
+              PR_NUMBER=${{ github.event.pull_request.number }}
+              COMMENT="🚨 **Block** 🚨    Bandit detected high-severity security issues. Please fix them before merging."
+              gh pr review $PR_NUMBER -r -b "$COMMENT" 
+              exit 1
+            else 
+              echo "No high severity issues found in Bandit scan."
+              PR_NUMBER=${{ github.event.pull_request.number }}
+              COMMENT="✅ **Successful**✅  No high-severity issues found in Bandit scan. You can proceed with the merge."
+              gh pr review $PR_NUMBER -a -b "$COMMENT"
+              gh pr merge $PR_NUMBER --merge 
+            fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+        
