@@ -67,7 +67,7 @@ def print_report(report):
                 table.add_row(["", "", "", cwe["id"], f"{Fore.RED}{likelihood}{Style.RESET_ALL}"])
             else:
                 table.add_row([entry["id"], entry["url"], entry["severity"], cwe["id"], likelihood])
-        table.add_divider()
+        #table.add_divider()
 
     print(table)
     
@@ -87,6 +87,7 @@ def analyze_cwe(alerts):
                 if match:
                     cwe = match.group(1)
                     cwe_likelihood = get_cwe_likelihood(cwe)
+                    print(cwe)
                     report_entry["cwe_ids"].append({"id": f"CWE-{cwe}", "likelihood": cwe_likelihood})
             report.append(report_entry)
     
